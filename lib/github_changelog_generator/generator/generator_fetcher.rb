@@ -8,7 +8,8 @@ module GitHubChangelogGenerator
       print "Fetching events for issues and PR: 0/#{@issues.count + @pull_requests.count}\r" if options[:verbose]
 
       # Async fetching events:
-      @fetcher.fetch_events_async(@issues + @pull_requests)
+      @fetcher.fetch_events_async(@issues)
+      @fetcher.fetch_events_async(@pull_requests)
     end
 
     # Async fetching of all tags dates
