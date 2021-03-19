@@ -37,7 +37,7 @@ describe GitLabChangelogGenerator::GitlabFetcher do
   end
 
   describe "#fetch_auth_token" do
-    token = GitLabChangelogGenerator::GitlabFetcher::CHANGELOG_AUTH_TOKEN
+    token = GitLabChangelogGenerator::GitlabFetcher::CHANGELOG_GITHUB_TOKEN
     context "when token in ENV exist" do
       before { stub_const("ENV", ENV.to_hash.merge(token => VALID_TOKEN)) }
       subject { fetcher.send(:fetch_auth_token) }
