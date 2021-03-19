@@ -237,8 +237,9 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
           commit["sha"] = commit["id"]
         end
         # TODO: do not know what the equivalent for gitlab is
-        raise StandardError, "Sha #{older} and sha #{newer} are not related; please file a github-changelog-generator issue and describe how to replicate this issue." if compare_data["compare_same_ref"] == true
-
+        if compare_data["compare_same_ref"] == true
+          raise StandardError, "Sha #{older} and sha #{newer} are not related; please file a github-changelog-generator issue and describe how to replicate this issue."
+        end
         @compares["#{older}...#{newer}"] = stringify_keys_deep(compare_data.to_hash)
       end
       @compares["#{older}...#{newer}"]
@@ -355,8 +356,10 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
     # This is wrapper with rescue block
     #
     # @return [Object] returns exactly the same, what you put in the block, but wrap it with begin-rescue block
-    def check_response(&block)
-      Retriable.retriable(retry_options, &block)
+    def check_response
+      Retriable.retriable(retry_options) do
+        yield
+      end
     rescue MovedPermanentlyError => e
       fail_with_message(e, "The repository has moved, update your configuration")
     rescue Gitlab::Error::Forbidden => e
@@ -404,7 +407,7 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
     #
     # @param [String] log_string
     def print_in_same_line(log_string)
-      print "#{log_string}\r"
+      print log_string + "\r"
     end
 
     # Print long line with spaces on same line to clear prev message
