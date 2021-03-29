@@ -11,15 +11,10 @@ module GitHubChangelogGenerator
       fetch_tags_dates(all_tags) # Creates a Hash @tag_times_hash
       all_sorted_tags = sort_tags_by_date(all_tags)
 
-      @sorted_tags   = filter_excluded_tags(all_sorted_tags)
+      @sorted_tags   = filter_included_tags(all_sorted_tags)
+      @sorted_tags   = filter_excluded_tags(@sorted_tags)
       @filtered_tags = get_filtered_tags(@sorted_tags)
-
-      # Because we need to properly create compare links, we need a sorted list
-      # of all filtered tags (including the excluded ones). We'll exclude those
-      # tags from section headers inside the mapping function.
-      section_tags = get_filtered_tags(all_sorted_tags)
-
-      @tag_section_mapping = build_tag_section_mapping(section_tags, @filtered_tags)
+      @tag_section_mapping = build_tag_section_mapping(@filtered_tags, @filtered_tags)
 
       @filtered_tags
     end
@@ -83,7 +78,7 @@ module GitHubChangelogGenerator
     # @return [Array] link, name and time of the tag
     def detect_link_tag_time(newer_tag)
       # if tag is nil - set current time
-      newer_tag_time = newer_tag.nil? ? Time.new : get_time_of_tag(newer_tag)
+      newer_tag_time = newer_tag.nil? ? Time.new.getutc : get_time_of_tag(newer_tag)
 
       # if it's future release tag - set this value
       if newer_tag.nil? && options[:future_release]
@@ -159,6 +154,17 @@ module GitHubChangelogGenerator
         end
       end
       filtered_tags
+    end
+
+    # @param [Array] all_tags all tags
+    # @return [Array] filtered tags according to :include_tags_regex option
+    def filter_included_tags(all_tags)
+      if options[:include_tags_regex]
+        regex = Regexp.new(options[:include_tags_regex])
+        all_tags.select { |tag| regex =~ tag["name"] }
+      else
+        all_tags
+      end
     end
 
     # @param [Array] all_tags all tags

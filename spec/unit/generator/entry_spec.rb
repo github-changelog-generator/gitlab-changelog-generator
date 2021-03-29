@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable Metrics/ModuleLength
 module GitHubChangelogGenerator
   RSpec.describe Entry do
     def label(name)
@@ -58,9 +57,6 @@ module GitHubChangelogGenerator
     let(:issues) { [] }
     let(:pull_requests) { [] }
     let(:tags) { [] }
-    let(:compare_shas) do
-      { "aaaaa1...master" => ["aaaaa1"] }
-    end
 
     # Default to standard options minus verbose to avoid output during testing.
     let(:options) do
@@ -76,15 +72,14 @@ module GitHubChangelogGenerator
         fetch_closed_issues_and_pr: [issues, pull_requests],
         fetch_closed_pull_requests: [],
         fetch_events_async: issues + pull_requests,
-        fetch_tag_shas_async: nil,
+        fetch_tag_shas: nil,
         fetch_comments_async: nil,
         default_branch: "master",
         oldest_commit: { "sha" => "aaaaa1" },
         fetch_commit: { "commit" => { "author" => { "date" => Time.now.utc } } }
       )
-      allow(fake_fetcher).to receive(:fetch_compare) do |old, new|
-        # Comparisons has a "commits" key of an array of commit hashes each with a "sha" key.
-        { "commits" => compare_shas["#{old}...#{new}"].collect { |sha| { "sha" => sha } } }
+      allow(fake_fetcher).to receive(:commits_in_branch) do
+        ["aaaaa1"]
       end
       allow(GitHubChangelogGenerator::OctoFetcher).to receive(:new).and_return(fake_fetcher)
       generator = GitHubChangelogGenerator::Generator.new(options)
@@ -426,6 +421,18 @@ module GitHubChangelogGenerator
             sections_json.shift
           end
         end
+        context "parse also body_only" do
+          let(:sections_string) { "{ \"foo\": { \"prefix\": \"foofix\", \"labels\": [\"test1\", \"test2\"]}, \"bar\": { \"prefix\": \"barfix\", \"labels\": [\"test3\", \"test4\"], \"body_only\": true}}" }
+
+          it "returns correctly constructed sections" do
+            require "json"
+
+            parsed_sections = subject.send(:parse_sections, sections_string)
+
+            expect(parsed_sections[0].body_only).to eq false
+            expect(parsed_sections[1].body_only).to eq true
+          end
+        end
       end
       context "hash" do
         let(:sections_hash) do
@@ -548,14 +555,14 @@ module GitHubChangelogGenerator
         end
 
         it "assigns issues to the correct sections" do
-          breaking_section = entry_sections.select { |section| section.name == "breaking" }[0]
-          enhancement_section = entry_sections.select { |section| section.name == "enhancements" }[0]
-          bug_section = entry_sections.select { |section| section.name == "bugs" }[0]
-          deprecated_section = entry_sections.select { |section| section.name == "deprecated" }[0]
-          removed_section = entry_sections.select { |section| section.name == "removed" }[0]
-          security_section = entry_sections.select { |section| section.name == "security" }[0]
-          issue_section = entry_sections.select { |section| section.name == "issues" }[0]
-          merged_section = entry_sections.select { |section| section.name == "merged" }[0]
+          breaking_section = entry_sections.find { |section| section.name == "breaking" }
+          enhancement_section = entry_sections.find { |section| section.name == "enhancements" }
+          bug_section = entry_sections.find { |section| section.name == "bugs" }
+          deprecated_section = entry_sections.find { |section| section.name == "deprecated" }
+          removed_section = entry_sections.find { |section| section.name == "removed" }
+          security_section = entry_sections.find { |section| section.name == "security" }
+          issue_section = entry_sections.find { |section| section.name == "issues" }
+          merged_section = entry_sections.find { |section| section.name == "merged" }
 
           expect(titles_for(breaking_section.issues)).to eq(["issue breaking", "issue all the labels", "pr breaking", "pr all the labels"])
           expect(titles_for(enhancement_section.issues)).to eq(["issue enhancement", "pr enhancement"])
@@ -612,10 +619,10 @@ module GitHubChangelogGenerator
         end
 
         it "assigns issues to the correct sections" do
-          foo_section = entry_sections.select { |section| section.name == "foo" }[0]
-          bar_section = entry_sections.select { |section| section.name == "bar" }[0]
-          issue_section = entry_sections.select { |section| section.name == "issues" }[0]
-          merged_section = entry_sections.select { |section| section.name == "merged" }[0]
+          foo_section = entry_sections.find { |section| section.name == "foo" }
+          bar_section = entry_sections.find { |section| section.name == "bar" }
+          issue_section = entry_sections.find { |section| section.name == "issues" }
+          merged_section = entry_sections.find { |section| section.name == "merged" }
 
           aggregate_failures "checks all sections" do
             expect(titles_for(foo_section.issues)).to eq(["issue test1", "issue all the labels", "issue some included labels", "pr test1", "pr all the labels", "pr some included labels"])
@@ -670,10 +677,10 @@ module GitHubChangelogGenerator
         end
 
         it "assigns issues to the correct sections" do
-          foo_section = entry_sections.select { |section| section.name == "foo" }[0]
-          bar_section = entry_sections.select { |section| section.name == "bar" }[0]
-          issue_section = entry_sections.select { |section| section.name == "issues" }[0]
-          merged_section = entry_sections.select { |section| section.name == "merged" }[0]
+          foo_section = entry_sections.find { |section| section.name == "foo" }
+          bar_section = entry_sections.find { |section| section.name == "bar" }
+          issue_section = entry_sections.find { |section| section.name == "issues" }
+          merged_section = entry_sections.find { |section| section.name == "merged" }
 
           aggregate_failures "checks all sections" do
             expect(titles_for(foo_section.issues)).to eq(["issue test1", "issue all the labels", "pr test1", "pr all the labels"])
@@ -737,12 +744,12 @@ module GitHubChangelogGenerator
         end
 
         it "assigns issues to the correct sections" do
-          foo_section = entry_sections.select { |section| section.name == "foo" }[0]
-          breaking_section = entry_sections.select { |section| section.name == "breaking" }[0]
-          enhancement_section = entry_sections.select { |section| section.name == "enhancements" }[0]
-          bug_section = entry_sections.select { |section| section.name == "bugs" }[0]
-          issue_section = entry_sections.select { |section| section.name == "issues" }[0]
-          merged_section = entry_sections.select { |section| section.name == "merged" }[0]
+          foo_section = entry_sections.find { |section| section.name == "foo" }
+          breaking_section = entry_sections.find { |section| section.name == "breaking" }
+          enhancement_section = entry_sections.find { |section| section.name == "enhancements" }
+          bug_section = entry_sections.find { |section| section.name == "bugs" }
+          issue_section = entry_sections.find { |section| section.name == "issues" }
+          merged_section = entry_sections.find { |section| section.name == "merged" }
 
           aggregate_failures "checks all sections" do
             expect(titles_for(breaking_section.issues)).to eq(["issue all the labels", "pr all the labels"])
@@ -757,4 +764,3 @@ module GitHubChangelogGenerator
     end
   end
 end
-# rubocop:enable Metrics/ModuleLength

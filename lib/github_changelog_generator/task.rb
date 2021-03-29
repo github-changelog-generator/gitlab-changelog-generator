@@ -15,11 +15,11 @@ module GitHubChangelogGenerator
                   pulls filter_issues_by_milestone author
                   unreleased_only unreleased unreleased_label
                   compare_link include_labels exclude_labels
-                  bug_labels enhancement_labels
+                  bug_labels enhancement_labels include_tags_regex
                   between_tags exclude_tags exclude_tags_regex since_tag max_issues
                   github_site github_endpoint simple_list gitlab
                   future_release release_branch verbose release_url
-                  base configure_sections add_sections]
+                  base configure_sections add_sections http_cache]
 
     OPTIONS.each do |o|
       attr_accessor o.to_sym
@@ -31,6 +31,7 @@ module GitHubChangelogGenerator
     #
     #   GitHubChangelogGenerator::RakeTask.new
     def initialize(*args, &task_block)
+      super
       @name = args.shift || :changelog
 
       define(args, &task_block)

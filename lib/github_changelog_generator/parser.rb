@@ -37,7 +37,7 @@ module GitHubChangelogGenerator
     def self.setup_parser(options)
       OptionParser.new do |opts| # rubocop:disable Metrics/BlockLength
         opts.banner = "Usage: github_changelog_generator --user USER --project PROJECT [options]"
-        opts.on("-u", "--user USER", "Username of the owner of target GitHub repo.") do |last|
+        opts.on("-u", "--user USER", "Username of the owner of the target GitHub repo OR the namespace of target Github repo if owned by an organization.") do |last|
           options[:user] = last
         end
         opts.on("-p", "--project PROJECT", "Name of project on GitHub.") do |last|
@@ -89,7 +89,7 @@ module GitHubChangelogGenerator
           options[:add_sections] = v
         end
         opts.on("--front-matter [JSON]", "Add YAML front matter. Formatted as JSON because it's easier to add on the command line.") do |v|
-          options[:frontmatter] = JSON.parse(v).to_yaml + "---\n"
+          options[:frontmatter] = "#{JSON.parse(v).to_yaml}---\n"
         end
         opts.on("--pr-label [LABEL]", "Set up custom label for pull requests section. Default is \"**Merged pull requests:**\".") do |v|
           options[:merge_prefix] = v
@@ -108,6 +108,9 @@ module GitHubChangelogGenerator
         end
         opts.on("--[no-]filter-by-milestone", "Use milestone to detect when issue was resolved. Default is true.") do |last|
           options[:filter_issues_by_milestone] = last
+        end
+        opts.on("--[no-]issues-of-open-milestones", "Include issues of open milestones. Default is true.") do |v|
+          options[:issues_of_open_milestones] = v
         end
         opts.on("--[no-]author", "Add author of pull request at the end. Default is true.") do |author|
           options[:author] = author
@@ -157,6 +160,9 @@ module GitHubChangelogGenerator
         opts.on("--issue-line-labels x,y,z", Array, 'The specified labels will be shown in brackets next to each matching issue. Use "ALL" to show all labels. Default is [].') do |list|
           options[:issue_line_labels] = list
         end
+        opts.on("--include-tags-regex [REGEX]", "Apply a regular expression on tag names so that they can be included, for example: --include-tags-regex \".*\+\d{1,}\".") do |last|
+          options[:include_tags_regex] = last
+        end
         opts.on("--exclude-tags  x,y,z", Array, "Changelog will exclude specified tags") do |list|
           options[:exclude_tags] = list
         end
@@ -168,6 +174,9 @@ module GitHubChangelogGenerator
         end
         opts.on("--due-tag  x", "Changelog will end before specified tag.") do |v|
           options[:due_tag] = v
+        end
+        opts.on("--since-commit  x", "Fetch only commits after this time. eg. \"2017-01-01 10:00:00\"") do |v|
+          options[:since_commit] = v
         end
         opts.on("--max-issues [NUMBER]", Integer, "Maximum number of issues to fetch from GitHub. Default is unlimited.") do |max|
           options[:max_issues] = max
@@ -233,6 +242,7 @@ module GitHubChangelogGenerator
         add_pr_wo_labels: true,
         pulls: true,
         filter_issues_by_milestone: true,
+        issues_of_open_milestones: true,
         author: true,
         unreleased: true,
         unreleased_label: "Unreleased",

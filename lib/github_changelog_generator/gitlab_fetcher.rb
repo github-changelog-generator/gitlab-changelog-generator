@@ -14,10 +14,10 @@ module GitLabChangelogGenerator
     PER_PAGE_NUMBER   = 100
     MAX_THREAD_NUMBER = 25
     MAX_FORBIDDEN_RETRIES = 100
-    CHANGELOG_AUTH_TOKEN = "CHANGELOG_AUTH_TOKEN"
+    CHANGELOG_GITHUB_TOKEN = "CHANGELOG_GITHUB_TOKEN"
     RATE_LIMIT_EXCEEDED_MSG = "Warning: Can't finish operation: GitLab API rate limit exceeded, changelog may be " \
     "missing some issues. You can limit the number of issues fetched using the `--max-issues NUM` argument."
-    NO_TOKEN_PROVIDED = "Warning: No token provided (-t option) and variable $CHANGELOG_AUTH_TOKEN was not found. " \
+    NO_TOKEN_PROVIDED = "Warning: No token provided (-t option) and variable $CHANGELOG_GITHUB_TOKEN was not found. " \
     "This script can make only 50 requests to GitLab API per hour without token!"
 
     # @param options [Hash] Options passed in
@@ -237,9 +237,8 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
           commit["sha"] = commit["id"]
         end
         # TODO: do not know what the equivalent for gitlab is
-        if compare_data["compare_same_ref"] == true
-          raise StandardError, "Sha #{older} and sha #{newer} are not related; please file a github-changelog-generator issue and describe how to replicate this issue."
-        end
+        raise StandardError, "Sha #{older} and sha #{newer} are not related; please file a github-changelog-generator issue and describe how to replicate this issue." if compare_data["compare_same_ref"] == true
+
         @compares["#{older}...#{newer}"] = stringify_keys_deep(compare_data.to_hash)
       end
       @compares["#{older}...#{newer}"]
@@ -356,10 +355,8 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
     # This is wrapper with rescue block
     #
     # @return [Object] returns exactly the same, what you put in the block, but wrap it with begin-rescue block
-    def check_response
-      Retriable.retriable(retry_options) do
-        yield
-      end
+    def check_response(&block)
+      Retriable.retriable(retry_options, &block)
     rescue MovedPermanentlyError => e
       fail_with_message(e, "The repository has moved, update your configuration")
     rescue Gitlab::Error::Forbidden => e
@@ -407,7 +404,7 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
     #
     # @param [String] log_string
     def print_in_same_line(log_string)
-      print log_string + "\r"
+      print "#{log_string}\r"
     end
 
     # Print long line with spaces on same line to clear prev message
@@ -416,11 +413,11 @@ Make sure, that you push tags to remote repo via 'git push --tags'"
     end
 
     # Returns AUTH token. First try to use variable, provided by --token option,
-    # otherwise try to fetch it from CHANGELOG_AUTH_TOKEN env variable.
+    # otherwise try to fetch it from CHANGELOG_GITHUB_TOKEN env variable.
     #
     # @return [String]
     def fetch_auth_token
-      env_var = @options[:token].presence || ENV["CHANGELOG_AUTH_TOKEN"]
+      env_var = @options[:token].presence || ENV["CHANGELOG_GITHUB_TOKEN"]
 
       GitHubChangelogGenerator::Helper.log.warn NO_TOKEN_PROVIDED unless env_var
 
