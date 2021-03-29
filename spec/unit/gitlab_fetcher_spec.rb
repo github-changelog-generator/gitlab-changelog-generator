@@ -354,6 +354,7 @@ describe GitLabChangelogGenerator::GitlabFetcher do
                     "closed_at" => "2015-07-16T12:21:42Z",
                     "body" => "" }]
 
+
         # Check that they are blank to begin with
         expect(issues.first["events"]).to be_nil
 
@@ -417,6 +418,7 @@ describe GitLabChangelogGenerator::GitlabFetcher do
                                  "site_admin" => false },
                              "event" => "closed",
                              "commit_id" => "decfe840d1a1b86e0c28700de5362d3365a29555",
+
                              "commit_url" =>
                                "https://api.github.com/repos/skywinder/changelog_test/commits/decfe840d1a1b86e0c28700de5362d3365a29555",
                              "created_at" => "2015-07-16T12:21:42Z" }]
@@ -495,6 +497,7 @@ describe GitLabChangelogGenerator::GitlabFetcher do
                       "site_admin" => false },
                   "event" => "referenced",
                   "commit_id" => "decfe840d1a1b86e0c28700de5362d3365a29555",
+
                   "commit_url" =>
                     "https://api.github.com/repos/skywinder/changelog_test/commits/decfe840d1a1b86e0c28700de5362d3365a29555",
                   "created_at" => "2015-07-16T12:21:16Z" }
